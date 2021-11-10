@@ -7,7 +7,7 @@ use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 use tokio_stream::{StreamExt, wrappers::TcpListenerStream};
 use soketto::handshake::server::Response;
 
-use crate::messages::{Message, MessageType};
+use crate::messages::Message;
 
 
 pub struct Relay {
@@ -33,7 +33,7 @@ impl Relay {
 
     pub async fn start(&mut self) -> Result<(), Box<dyn Error>> {
         println!("Starting Relay Server...");
-        let listener = TcpListener::bind("127.0.0.1:8004").await?;
+        let listener = TcpListener::bind("0.0.0.0:8004").await?;
 
         let mut incoming = TcpListenerStream::new(listener);
 
@@ -55,10 +55,10 @@ impl Relay {
             let _data_type = receiver.receive_data(&mut data).await?;
             let message: Message = serde_json::from_str(str::from_utf8(&data).unwrap())?;
 
-            match message.message_type {
-                MessageType::Send => {
+            match message {
+                Message::Send(message) => {
                     let code = "my-room";
-                    let filename = message.filename.unwrap();
+                    let filename = message.filename;
                     let room = RoomInfo {
                         sender: ClientInfo { tx: sender, rx: receiver },
                         receiver: None,
@@ -67,8 +67,8 @@ impl Relay {
                     };
                     self.rooms.insert(code.to_string(), room);
                 },
-                MessageType::Get => {
-                    let code = message.code.unwrap();
+                Message::Get(message) => {
+                    let code = message.code;
                     match self.rooms.get_mut(&code) {
                         Some(room) => {
                            let ready_message = Message::new_ready();
@@ -76,7 +76,7 @@ impl Relay {
                            let mut data = Vec::new();
                            room.sender.rx.receive_data(&mut data).await?;
                            sender.send_binary(&data).await?;
-                           
+                           self.rooms.remove(&code).unwrap();
                         },
                         None => {},
                     };
