@@ -8,14 +8,15 @@ use crate::messages::{Message, ContentMessage};
 pub struct Sender {}
 
 impl Sender {
+
     pub fn new() -> Self {
         Sender {}
     }
 
     pub async fn send(&self, filename: &str) -> Result<(), Box<dyn Error>> {
-        let socket = tokio::net::TcpStream::connect("127.0.0.1:8004").await?;
+        let socket = tokio::net::TcpStream::connect("138.68.103.243:8004").await?;
 
-        let mut client = Client::new(socket.compat(), "127.0.0.1:8004", "/");
+        let mut client = Client::new(socket.compat(), "138.68.103.243:8004", "/");
 
         let (mut sender, mut receiver) = match client.handshake().await? {
             ServerResponse::Accepted { .. } => client.into_builder().finish(),
@@ -46,9 +47,9 @@ impl Sender {
     }
 
     pub async fn get(&self, code: &str) -> Result<(), Box<dyn Error>> {
-        let socket = tokio::net::TcpStream::connect("127.0.0.1:8004").await?;
+        let socket = tokio::net::TcpStream::connect("138.68.103.243:8004").await?;
 
-        let mut client = Client::new(socket.compat(), "127.0.0.1:8004", "/");
+        let mut client = Client::new(socket.compat(), "138.68.103.243:8004", "/");
 
         let (mut sender, mut receiver) = match client.handshake().await? {
             ServerResponse::Accepted { .. } => client.into_builder().finish(),
