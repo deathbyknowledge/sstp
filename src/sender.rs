@@ -65,7 +65,12 @@ impl Sender {
 
         let mut data = Vec::new();
         receiver.receive_data(&mut data).await?;
-        println!("Recieved data. Starting fs op");
+        let message: Message = serde_json::from_slice(&data)?;
+        if let Message::Error(error) = message {
+          println!("{}", error.text);
+          return Ok(());
+        }
+        println!("Recieved data. Starting fs op.");
         let content_message: ContentMessage = serde_json::from_slice(&data)?;
         fs::write(content_message.filename, content_message.content)?;
         Ok(())

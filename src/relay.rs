@@ -78,7 +78,10 @@ impl Relay {
                            sender.send_binary(&data).await?;
                            self.rooms.remove(&code).unwrap();
                         },
-                        None => {},
+                        None => {
+                           let error_message = Message::new_error(String::from("Room code does not exist"));
+                           sender.send_text(serde_json::to_string(&error_message)?).await?;
+                        },
                     };
 
                 },

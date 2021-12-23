@@ -26,6 +26,7 @@ pub enum Message {
     Get(GetMessage),
     Ready,
     Content(ContentMessage),
+    Error(ErrorMessage),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -68,6 +69,10 @@ impl Message {
 
     pub fn new_ready() -> Self {
         Message::Ready
+    }
+
+    pub fn new_error(text: String) -> Self {
+        Message::Error(ErrorMessage { text } )
     }
 
     pub fn new_content(filename: String, content: Vec<u8>) -> ContentMessage {
