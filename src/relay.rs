@@ -19,6 +19,7 @@ struct RoomInfo {
     receiver: Option<ClientInfo>,
     filename: String,
     opened: Instant, 
+    size: usize,
 }
 
 struct ClientInfo {
@@ -59,10 +60,12 @@ impl Relay {
                 Message::Send(message) => {
                     let code = "my-room";
                     let filename = message.filename;
+                    let size = message.size;
                     let room = RoomInfo {
                         sender: ClientInfo { tx: sender, rx: receiver },
                         receiver: None,
                         filename,
+                        size,
                         opened: Instant::now(),
                     };
                     self.rooms.insert(code.to_string(), room);
@@ -71,6 +74,19 @@ impl Relay {
                     let code = message.code;
                     match self.rooms.get_mut(&code) {
                         Some(room) => {
+                           // Send Approval request for this file
+                           let approve_req = Message::new_approve_req(room.filename.to_string(), room.size);
+                           room.sender.tx.send_text(approve_req).await?; 
+                           let mut data = Vec::new();
+                           room.sender.rx.receive_data(&mut data).await?;
+                           let res_message: Message = serde_json::from_slice(&data)?;
+                           if let Message::ApproveRes(res) = res_message {
+                               if !res.approved {
+                                  continue;
+                               }
+                           }
+
+                           // Send Ready message to start the file transfer from the sending client
                            let ready_message = Message::new_ready();
                            room.sender.tx.send_text(serde_json::to_string(&ready_message)?).await?; 
                            let mut data = Vec::new();

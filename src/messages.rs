@@ -22,16 +22,19 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub enum Message {
-    Send(SendMessage),
-    Get(GetMessage),
-    Ready,
+    ApproveRes(ApproveResMessage),
+    ApproveReq(ApproveReqMessage),
     Content(ContentMessage),
     Error(ErrorMessage),
+    Get(GetMessage),
+    Ready,
+    Send(SendMessage)
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct SendMessage {
     pub filename: String,
+    pub size: usize,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -46,9 +49,14 @@ pub struct ContentMessage {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ApprovalMessage {
+pub struct ApproveReqMessage {
     pub filename: String,
-    pub size: f32,
+    pub size: usize,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ApproveResMessage {
+    pub approved: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -56,11 +64,20 @@ pub struct ErrorMessage {
     pub text: String,
 }
 
-
 impl Message {
     
-    pub fn new_send(filename: String) -> Self {
-        Message::Send(SendMessage { filename })
+    pub fn new_send(filename: String, size: usize) -> Self {
+        Message::Send(SendMessage { filename, size })
+    }
+
+    pub fn new_approve_req(filename: String, size: usize) -> String {
+        let req = Message::ApproveReq(ApproveReqMessage { filename, size });
+        serde_json::to_string(&req).expect("Couldn't parse message.")
+    }
+ 
+    pub fn new_approve_res(approved: bool) -> String {
+        let req = Message::ApproveRes(ApproveResMessage { approved });
+        serde_json::to_string(&req).expect("Couldn't parse message.")
     }
 
     pub fn new_get(code: String) -> Self {
@@ -71,12 +88,12 @@ impl Message {
         Message::Ready
     }
 
-    pub fn new_error(text: String) -> Self {
-        Message::Error(ErrorMessage { text } )
-    }
-
     pub fn new_content(filename: String, content: Vec<u8>) -> ContentMessage {
         ContentMessage { filename, content }
+    }
+
+    pub fn new_error(text: String) -> Self {
+        Message::Error(ErrorMessage { text } )
     }
 }
 
