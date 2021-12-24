@@ -17,7 +17,6 @@ use serde::{Deserialize, Serialize};
  * Sender <-- ReadyMessage
  * Sender --> ContentMessage (Several messages sent with Chunking)
  * Relay <-- ContentMessage (Relays all ContentMessages to Receiver)
- *
  */
 
 #[derive(Serialize, Deserialize)]

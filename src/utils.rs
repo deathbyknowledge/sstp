@@ -1,0 +1,68 @@
+use std::error::Error;
+use soketto::connection::{Receiver as ReceiverSk, Sender as SenderSk};
+use soketto::handshake::{Client, ServerResponse};
+use soketto::handshake::server::Response;
+use tokio::net::TcpStream;
+use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
+
+// CONNECTIONS
+pub async fn start_ws_conn(
+) -> Result<(SenderSk<Compat<TcpStream>>, ReceiverSk<Compat<TcpStream>>), Box<dyn Error>> {
+  let socket = TcpStream::connect("138.68.103.243:8004").await?;
+
+  let mut client = Client::new(socket.compat(), "138.68.103.243:8004", "/");
+
+  let (sender, receiver) = match client.handshake().await? {
+    ServerResponse::Accepted { .. } => client.into_builder().finish(),
+    ServerResponse::Redirect { .. } => unimplemented!("f"),
+    ServerResponse::Rejected { .. } => unimplemented!("f"),
+  };
+
+  Ok((sender, receiver))
+}
+
+pub async fn start_ws_handshake(stream: TcpStream
+) -> Result<(SenderSk<Compat<TcpStream>>, ReceiverSk<Compat<TcpStream>>), Box<dyn Error>> {
+  let mut server = soketto::handshake::Server::new(stream.compat());
+  let websocket_key = {
+    let req = server.receive_request().await?;
+    req.key()
+  };
+  let accept = Response::Accept {
+    key: websocket_key,
+    protocol: None,
+  };
+  server.send_response(&accept).await?;
+
+  let (sender, receiver) = server.into_builder().finish();
+  Ok((sender, receiver))
+}
+
+
+
+// STDOUT/STDIN
+fn read_input() -> String {
+  use std::io::{stdin, stdout, Write};
+  let mut s = String::new();
+  let _ = stdout().flush();
+  stdin()
+    .read_line(&mut s)
+    .expect("Did not enter a correct string");
+  if let Some('\n')=s.chars().next_back() {
+    s.pop();
+  }
+  if let Some('\r')=s.chars().next_back() {
+    s.pop();
+  }
+  s
+}
+
+pub fn req_keyboard_approval() -> bool{
+  let mut input = read_input();
+  while input != "y" && input != "n" {
+    println!("Please submit only 'y' or 'n'.");
+    input = read_input();
+  }
+  let approved = input.eq("y");
+  approved
+}

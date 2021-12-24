@@ -1,13 +1,13 @@
-use soketto::handshake::server::Response;
 use std::collections::HashMap;
 use std::error::Error;
 use std::str;
 use std::time::Instant;
 use tokio::net::{TcpListener, TcpStream};
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
-use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
+use tokio_util::compat::{Compat};
 
 use crate::messages::Message;
+use crate::utils::{start_ws_handshake};
 
 pub struct Relay {
   rooms: HashMap<String, RoomInfo>,
@@ -36,22 +36,10 @@ impl Relay {
   pub async fn start(&mut self) -> Result<(), Box<dyn Error>> {
     println!("Starting Relay Server...");
     let listener = TcpListener::bind("0.0.0.0:8004").await?;
-
     let mut incoming = TcpListenerStream::new(listener);
 
     while let Some(socket) = incoming.next().await {
-      let mut server = soketto::handshake::Server::new(socket?.compat());
-      let websocket_key = {
-        let req = server.receive_request().await?;
-        req.key()
-      };
-      let accept = Response::Accept {
-        key: websocket_key,
-        protocol: None,
-      };
-      server.send_response(&accept).await?;
-
-      let (mut sender, mut receiver) = server.into_builder().finish();
+      let (mut sender, mut receiver) = start_ws_handshake(socket?).await?;
 
       let mut data = Vec::new();
       let _data_type = receiver.receive_data(&mut data).await?;
@@ -80,7 +68,7 @@ impl Relay {
             Some(room) => {
               // Send Approval request for this file
               let approve_req = Message::new_approve_req(room.filename.to_string(), room.size);
-              room.sender.tx.send_text(approve_req).await?;
+              sender.send_text(approve_req).await?;
               let mut data = Vec::new();
               room.sender.rx.receive_data(&mut data).await?;
               let res_message: Message = serde_json::from_slice(&data)?;

@@ -1,11 +1,8 @@
 use crate::messages::{ContentMessage, Message};
-use soketto::connection::{Receiver as ReceiverSk, Sender as SenderSk};
-use soketto::handshake::{Client, ServerResponse};
-use std::error::Error;
+use crate::utils::*;
 use std::fs;
 use std::str;
-use tokio::net::TcpStream;
-use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
+use std::error::Error;
 
 pub struct Sender {}
 
@@ -58,46 +55,21 @@ impl Sender {
       }
       Message::ApproveReq(req) => {
         println!("Accept {} ({})? (y/n)", req.filename, req.size);
-        let mut input = read_input();
-        while input != "y" && input != "n" {
-          println!("Please submit only 'y' or 'n'.");
-          input = read_input();
-        }
-        let approved = input == "y";
+        let approved = req_keyboard_approval();
         let res_message = Message::new_approve_res(approved);
         sender.send_text(res_message).await?;
+        if !approved {
+          return Ok(());
+        }
       }
       _ => unreachable!(),
     }
+    data = Vec::new();
+    receiver.receive_data(&mut data).await?;
     let content_message: ContentMessage = serde_json::from_slice(&data)?;
 
     sender.flush().await?;
     fs::write(content_message.filename, content_message.content)?;
     Ok(())
   }
-}
-
-async fn start_ws_conn(
-) -> Result<(SenderSk<Compat<TcpStream>>, ReceiverSk<Compat<TcpStream>>), Box<dyn Error>> {
-  let socket = TcpStream::connect("138.68.103.243:8004").await?;
-
-  let mut client = Client::new(socket.compat(), "138.68.103.243:8004", "/");
-
-  let (sender, receiver) = match client.handshake().await? {
-    ServerResponse::Accepted { .. } => client.into_builder().finish(),
-    ServerResponse::Redirect { .. } => unimplemented!("f"),
-    ServerResponse::Rejected { .. } => unimplemented!("f"),
-  };
-
-  Ok((sender, receiver))
-}
-
-fn read_input() -> String {
-  use std::io::{stdin, stdout, Write};
-  let mut s = String::new();
-  let _ = stdout().flush();
-  stdin()
-    .read_line(&mut s)
-    .expect("Did not enter a correct string");
-  s
 }

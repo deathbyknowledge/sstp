@@ -1,6 +1,7 @@
 mod messages;
 mod relay;
 mod sender;
+mod utils;
 
 use clap::{App, Arg, SubCommand};
 use relay::Relay;
