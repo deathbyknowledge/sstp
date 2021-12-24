@@ -70,7 +70,7 @@ impl Relay {
               let approve_req = Message::new_approve_req(room.filename.to_string(), room.size);
               sender.send_text(approve_req).await?;
               let mut data = Vec::new();
-              room.sender.rx.receive_data(&mut data).await?;
+              receiver.receive_data(&mut data).await?;
               let res_message: Message = serde_json::from_slice(&data)?;
               if let Message::ApproveRes(res) = res_message {
                 if !res.approved {

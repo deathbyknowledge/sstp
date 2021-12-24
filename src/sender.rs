@@ -13,9 +13,9 @@ impl Sender {
 
   pub async fn send(&self, filename: &str) -> Result<(), Box<dyn Error>> {
     let (mut sender, mut receiver) = start_ws_conn().await?;
-    let data = fs::read(filename)?;
+    let file = fs::read(filename)?;
 
-    let message = Message::new_send(filename.to_string(), data.len());
+    let message = Message::new_send(filename.to_string(), file.len());
     let message_text = serde_json::to_string(&message)?;
 
     sender.send_text(message_text).await?;
@@ -25,7 +25,7 @@ impl Sender {
 
     let message: Message = serde_json::from_slice(&data)?;
     if let Message::Ready = message {
-      let message = Message::new_content(filename.to_string(), data);
+      let message = Message::new_content(filename.to_string(), file);
       let msg = serde_json::to_vec(&message)?;
       sender.send_binary(msg).await?;
     } else {
