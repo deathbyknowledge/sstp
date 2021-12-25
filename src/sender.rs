@@ -15,10 +15,11 @@ impl Sender {
     let (mut sender, mut receiver) = start_ws_conn().await?;
     let file = fs::read(filename)?;
 
-    let message = Message::new_send(filename.to_string(), file.len());
-    let message_text = serde_json::to_string(&message)?;
+    let key = gen_room_key();
+    println!("You're key is {}", key);
+    let message = Message::new_send(filename.to_string(), file.len(), key);
 
-    sender.send_text(message_text).await?;
+    sender.send_text(message).await?;
 
     let mut data = Vec::new();
     receiver.receive_data(&mut data).await?;

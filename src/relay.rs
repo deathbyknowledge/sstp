@@ -47,7 +47,7 @@ impl Relay {
 
       match message {
         Message::Send(message) => {
-          let code = "my-room";
+          let code = message.code;
           let filename = message.filename;
           let size = message.size;
           let room = RoomInfo {

@@ -34,6 +34,7 @@ pub enum Message {
 pub struct SendMessage {
   pub filename: String,
   pub size: usize,
+  pub code: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -64,18 +65,19 @@ pub struct ErrorMessage {
 }
 
 impl Message {
-  pub fn new_send(filename: String, size: usize) -> Self {
-    Message::Send(SendMessage { filename, size })
+  pub fn new_send(filename: String, size: usize, code: String) -> String {
+    let msg = Message::Send(SendMessage { filename, size, code });
+    serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
   pub fn new_approve_req(filename: String, size: usize) -> String {
-    let req = Message::ApproveReq(ApproveReqMessage { filename, size });
-    serde_json::to_string(&req).expect("Couldn't parse message.")
+    let msg = Message::ApproveReq(ApproveReqMessage { filename, size });
+    serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
   pub fn new_approve_res(approved: bool) -> String {
-    let req = Message::ApproveRes(ApproveResMessage { approved });
-    serde_json::to_string(&req).expect("Couldn't parse message.")
+    let msg = Message::ApproveRes(ApproveResMessage { approved });
+    serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
   pub fn new_get(code: String) -> Self {

@@ -4,6 +4,7 @@ use soketto::handshake::{Client, ServerResponse};
 use soketto::handshake::server::Response;
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
+use parity_wordlist::random_phrase;
 
 // CONNECTIONS
 pub async fn start_ws_conn(
@@ -65,4 +66,12 @@ pub fn req_keyboard_approval() -> bool{
   }
   let approved = input.eq("y");
   approved
+}
+
+
+
+// Rand
+pub fn gen_room_key() -> String {
+  let phrase = random_phrase(4);
+  str::replace(&phrase, " ", "-")
 }
