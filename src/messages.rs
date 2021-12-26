@@ -66,7 +66,11 @@ pub struct ErrorMessage {
 
 impl Message {
   pub fn new_send(filename: String, size: usize, code: String) -> String {
-    let msg = Message::Send(SendMessage { filename, size, code });
+    let msg = Message::Send(SendMessage {
+      filename,
+      size,
+      code,
+    });
     serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 

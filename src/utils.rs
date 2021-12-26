@@ -1,10 +1,10 @@
-use std::error::Error;
+use parity_wordlist::random_phrase;
 use soketto::connection::{Receiver as ReceiverSk, Sender as SenderSk};
-use soketto::handshake::{Client, ServerResponse};
 use soketto::handshake::server::Response;
+use soketto::handshake::{Client, ServerResponse};
+use std::error::Error;
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
-use parity_wordlist::random_phrase;
 
 // CONNECTIONS
 pub async fn start_ws_conn(
@@ -22,7 +22,8 @@ pub async fn start_ws_conn(
   Ok((sender, receiver))
 }
 
-pub async fn start_ws_handshake(stream: TcpStream
+pub async fn start_ws_handshake(
+  stream: TcpStream,
 ) -> Result<(SenderSk<Compat<TcpStream>>, ReceiverSk<Compat<TcpStream>>), Box<dyn Error>> {
   let mut server = soketto::handshake::Server::new(stream.compat());
   let websocket_key = {
@@ -39,8 +40,6 @@ pub async fn start_ws_handshake(stream: TcpStream
   Ok((sender, receiver))
 }
 
-
-
 // STDOUT/STDIN
 fn read_input() -> String {
   use std::io::{stdin, stdout, Write};
@@ -49,16 +48,16 @@ fn read_input() -> String {
   stdin()
     .read_line(&mut s)
     .expect("Did not enter a correct string");
-  if let Some('\n')=s.chars().next_back() {
+  if let Some('\n') = s.chars().next_back() {
     s.pop();
   }
-  if let Some('\r')=s.chars().next_back() {
+  if let Some('\r') = s.chars().next_back() {
     s.pop();
   }
   s
 }
 
-pub fn req_keyboard_approval() -> bool{
+pub fn req_keyboard_approval() -> bool {
   let mut input = read_input();
   while input != "y" && input != "n" {
     println!("Please submit only 'y' or 'n'.");
@@ -67,8 +66,6 @@ pub fn req_keyboard_approval() -> bool{
   let approved = input.eq("y");
   approved
 }
-
-
 
 // Rand
 pub fn gen_room_key() -> String {

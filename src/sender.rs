@@ -1,8 +1,8 @@
 use crate::messages::{ContentMessage, Message};
 use crate::utils::*;
+use std::error::Error;
 use std::fs;
 use std::str;
-use std::error::Error;
 
 pub struct Sender {}
 
