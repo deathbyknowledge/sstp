@@ -55,7 +55,7 @@ impl Sender {
         return Ok(());
       }
       Message::ApproveReq(req) => {
-        println!("Accept {} ({})? (y/n)", req.filename, req.size);
+        println!("Accept {} ({}b)? (y/n)", req.filename, req.size);
         let approved = req_keyboard_approval();
         let res_message = Message::new_approve_res(approved);
         sender.send_text(res_message).await?;
