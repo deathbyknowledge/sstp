@@ -5,21 +5,35 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
-use tokio::time::{sleep, Duration};
+//use tokio::time::{sleep, Duration};
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tokio_util::compat::Compat;
 
-use crate::messages::Message;
+use crate::messages::{ApproveRes, Message, SendMessage};
 use crate::utils::start_ws_handshake;
 
 pub struct Relay {}
 
 struct RoomInfo {
   sender: ClientInfo,
-  receiver: Option<ClientInfo>,
   filename: String,
   opened: Instant,
   size: usize,
+}
+
+impl RoomInfo {
+  async fn get_approval(&mut self, client: &mut ClientInfo) -> Result<bool, Box<dyn Error>> {
+    let approve_req = Message::new_approve_req(self.filename.to_string(), self.size);
+    client.tx.send_text(approve_req).await?;
+    let mut data = Vec::new();
+    client.rx.receive_data(&mut data).await?;
+    let res = serde_json::from_slice(&data)?;
+    if let Message::ApproveRes(res) = res {
+      Ok(res.approved)
+    } else {
+      Err("Received wrong Message")
+    }
+  }
 }
 
 struct ClientInfo {
@@ -28,11 +42,7 @@ struct ClientInfo {
 }
 
 impl Relay {
-  pub fn new() -> Self {
-    Relay {}
-  }
-
-  pub async fn start(&mut self) -> Result<(), Box<dyn Error>> {
+  pub async fn start() -> Result<(), Box<dyn Error>> {
     println!("Starting Relay Server...");
     let listener = TcpListener::bind("0.0.0.0:8004").await?;
     let mut incoming = TcpListenerStream::new(listener);
@@ -43,7 +53,7 @@ impl Relay {
      * tokio::spawn(async move {
      *   Relay::start_cleanup(cleanup).await;
      * });
-    */
+     */
 
     while let Some(socket) = incoming.next().await {
       let rooms = rooms.clone();
@@ -69,37 +79,42 @@ impl Relay {
    *     }
    *   }
    * }
-  */
+   */
+
+  async fn create_room(
+    client: ClientInfo,
+    message: SendMessage,
+    rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
+  ) -> Result<(), Box<dyn Error>> {
+    let code = message.code;
+    let filename = message.filename;
+    let size = message.size;
+    let room = Arc::new(Mutex::new(RoomInfo {
+      sender: client,
+      filename,
+      size,
+      opened: Instant::now(),
+    }));
+    let mut rooms = rooms.lock().await;
+    rooms.insert(code.to_string(), room);
+    Ok(())
+  }
 
   async fn process_req(
     socket: TcpStream,
     rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
   ) -> Result<(), Box<dyn Error>> {
-    let (mut sender, mut receiver) = start_ws_handshake(socket).await?;
-
+    let (sender, receiver) = start_ws_handshake(socket).await?;
+    let mut client = ClientInfo {
+      tx: sender,
+      rx: receiver,
+    };
     let mut data = Vec::new();
-    receiver.receive_data(&mut data).await?;
+    client.rx.receive_data(&mut data).await?;
     let message: Message = serde_json::from_str(str::from_utf8(&data).unwrap())?;
 
     match message {
-      Message::Send(message) => {
-        let code = message.code;
-        let filename = message.filename;
-        let size = message.size;
-        let room = Arc::new(Mutex::new(RoomInfo {
-          sender: ClientInfo {
-            tx: sender,
-            rx: receiver,
-          },
-          receiver: None,
-          filename,
-          size,
-          opened: Instant::now(),
-        }));
-        let mut rooms = rooms.lock().await;
-        rooms.insert(code.to_string(), room);
-      }
-
+      Message::Send(message) => Relay::create_room(client, message, rooms).await?,
       Message::Get(message) => {
         let code = message.code;
         let room = {
@@ -115,39 +130,28 @@ impl Relay {
           Some(room) => {
             // Send Approval request for this file
             let mut room = room.lock().await;
-            let approve_req = Message::new_approve_req(room.filename.to_string(), room.size);
-            sender.send_text(approve_req).await?;
-            let mut data = Vec::new();
-            receiver.receive_data(&mut data).await?;
-            let res_message: Message = serde_json::from_slice(&data)?;
-            if let Message::ApproveRes(res) = res_message {
-              if !res.approved {
-                return Ok(());
-              }
+            let approved = room.get_approval(&mut client).await?;
+            if !approved {
+              return Ok(());
             }
 
             // Send Ready message to start the file transfer from the sending client
             let ready_message = Message::new_ready();
-            room
-              .sender
-              .tx
-              .send_text(serde_json::to_string(&ready_message)?)
-              .await?;
+            room.sender.tx.send_text(ready_message).await?;
             let mut data = Vec::new();
             room.sender.rx.receive_data(&mut data).await?;
-            sender.send_binary(&data).await?;
+            client.tx.send_binary(&data).await?;
             let mut rooms = rooms.lock().await;
             rooms.remove(&code).unwrap();
           }
+
           None => {
-            let error_message = Message::new_error(String::from("Room code does not exist"));
-            sender
-              .send_text(serde_json::to_string(&error_message)?)
-              .await?;
+            let error = Message::new_error(String::from("Room code does not exist"));
+            client.tx.send_text(error).await?;
           }
         };
       }
-      _ => {}
+      _ => unreachable!(),
     };
     Ok(())
   }

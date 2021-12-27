@@ -42,8 +42,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
       Ok(())
     }
     ("relay", _) => {
-      let mut server = Relay::new();
-      server.start().await?;
+      Relay::start().await?;
       Ok(())
     }
     _ => {

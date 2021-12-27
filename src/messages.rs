@@ -88,15 +88,17 @@ impl Message {
     Message::Get(GetMessage { code })
   }
 
-  pub fn new_ready() -> Self {
-    Message::Ready
+  pub fn new_ready() -> String {
+    let msg = Message::Ready;
+    serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
   pub fn new_content(filename: String, content: Vec<u8>) -> ContentMessage {
     ContentMessage { filename, content }
   }
 
-  pub fn new_error(text: String) -> Self {
-    Message::Error(ErrorMessage { text })
+  pub fn new_error(text: String) -> String {
+    let msg = Message::Error(ErrorMessage { text });
+    serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 }
