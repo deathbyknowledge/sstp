@@ -86,4 +86,3 @@ pub fn split_vec(mut vec: Vec<u8>) -> Vec<Vec<u8>> {
   }
   buffer
 }
-

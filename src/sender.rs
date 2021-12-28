@@ -59,7 +59,7 @@ impl Sender {
       }
       Message::ApproveReq(req) => {
         println!("Accept {} ({}b)? (y/n)", req.filename, req.size);
-        filename = req.filename; 
+        filename = req.filename;
         size = req.size;
         let approved = req_keyboard_approval();
         let res_message = Message::new_approve_res(approved);
