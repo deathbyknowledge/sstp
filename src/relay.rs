@@ -10,7 +10,7 @@ use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tokio_util::compat::Compat;
 
 use crate::messages::{Message, SendMessage};
-use crate::utils::start_ws_handshake;
+use crate::utils::{start_ws_handshake, calc_chunks};
 
 pub struct Relay {}
 
@@ -138,7 +138,7 @@ impl Relay {
             // Send Ready message to start the file transfer from the sending client
             let ready_message = Message::new_ready();
             room.sender.tx.send_text(ready_message).await?;
-            for _ in 0..room.size {
+            for _ in 0..calc_chunks(room.size) {
               let mut data = Vec::new();
               room.sender.rx.receive_data(&mut data).await?;
               client.tx.send_binary(&data).await?;

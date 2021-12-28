@@ -27,8 +27,7 @@ impl Sender {
     let message: Message = serde_json::from_slice(&data)?;
     if let Message::Ready = message {
       for chunk in file.chunks(1_000_000) {
-        let message = Message::new_content(chunk.to_vec());
-        let msg = serde_json::to_vec(&message)?;
+        let msg = Message::new_content(chunk.to_vec());
         sender.send_binary(msg).await?;
       }
     } else {
