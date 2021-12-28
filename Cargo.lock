@@ -565,7 +565,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "stp"
+name = "sstp"
 version = "0.1.0"
 dependencies = [
  "clap",
