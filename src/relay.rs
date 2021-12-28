@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tokio_util::compat::Compat;
 
-use crate::messages::{ApproveRes, Message, SendMessage};
+use crate::messages::{Message, SendMessage};
 use crate::utils::start_ws_handshake;
 
 pub struct Relay {}
@@ -31,7 +31,7 @@ impl RoomInfo {
     if let Message::ApproveRes(res) = res {
       Ok(res.approved)
     } else {
-      Err("Received wrong Message")
+      unreachable!();
     }
   }
 }
@@ -138,9 +138,11 @@ impl Relay {
             // Send Ready message to start the file transfer from the sending client
             let ready_message = Message::new_ready();
             room.sender.tx.send_text(ready_message).await?;
-            let mut data = Vec::new();
-            room.sender.rx.receive_data(&mut data).await?;
-            client.tx.send_binary(&data).await?;
+            for _ in 0..room.size {
+              let mut data = Vec::new();
+              room.sender.rx.receive_data(&mut data).await?;
+              client.tx.send_binary(&data).await?;
+            }
             let mut rooms = rooms.lock().await;
             rooms.remove(&code).unwrap();
           }

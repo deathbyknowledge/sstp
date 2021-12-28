@@ -44,7 +44,6 @@ pub struct GetMessage {
 
 #[derive(Serialize, Deserialize)]
 pub struct ContentMessage {
-  pub filename: String,
   pub content: Vec<u8>,
 }
 
@@ -93,8 +92,9 @@ impl Message {
     serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
-  pub fn new_content(filename: String, content: Vec<u8>) -> ContentMessage {
-    ContentMessage { filename, content }
+  pub fn new_content(content: Vec<u8>) -> String {
+    let msg = ContentMessage { content };
+    serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
   pub fn new_error(text: String) -> String {

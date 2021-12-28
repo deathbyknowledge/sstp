@@ -72,3 +72,18 @@ pub fn gen_room_key() -> String {
   let phrase = random_phrase(4);
   str::replace(&phrase, " ", "-")
 }
+
+// Format
+pub fn calc_chunks(size: usize) -> usize {
+  ((size as f32 + 1_000_000.0 - 1.0) / 1_000_000.0) as usize
+}
+
+pub fn split_vec(mut vec: Vec<u8>) -> Vec<Vec<u8>> {
+  let chunks = calc_chunks(vec.len());
+  let mut buffer = Vec::new();
+  for _ in 0..chunks {
+    buffer.insert(0, vec.split_off(1_000_000));
+  }
+  buffer
+}
+

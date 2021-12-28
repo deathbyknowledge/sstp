@@ -26,9 +26,11 @@ impl Sender {
 
     let message: Message = serde_json::from_slice(&data)?;
     if let Message::Ready = message {
-      let message = Message::new_content(filename.to_string(), file);
-      let msg = serde_json::to_vec(&message)?;
-      sender.send_binary(msg).await?;
+      for chunk in file.chunks(1_000_000) {
+        let message = Message::new_content(chunk.to_vec());
+        let msg = serde_json::to_vec(&message)?;
+        sender.send_binary(msg).await?;
+      }
     } else {
       panic!("Expected ReadyMessage. Got something else.");
     }
@@ -48,7 +50,8 @@ impl Sender {
     let mut data = Vec::new();
     receiver.receive_data(&mut data).await?;
     let message: Message = serde_json::from_slice(&data)?;
-
+    let filename;
+    let size;
     match message {
       Message::Error(error) => {
         println!("{}", error.text);
@@ -56,6 +59,8 @@ impl Sender {
       }
       Message::ApproveReq(req) => {
         println!("Accept {} ({}b)? (y/n)", req.filename, req.size);
+        filename = req.filename; 
+        size = req.size;
         let approved = req_keyboard_approval();
         let res_message = Message::new_approve_res(approved);
         sender.send_text(res_message).await?;
@@ -65,12 +70,18 @@ impl Sender {
       }
       _ => unreachable!(),
     }
-    data = Vec::new();
-    receiver.receive_data(&mut data).await?;
-    let content_message: ContentMessage = serde_json::from_slice(&data)?;
+
+    let mut buffer = Vec::new();
+    let chunks = calc_chunks(size);
+    for _ in 0..chunks {
+      let mut data = Vec::new();
+      receiver.receive_data(&mut data).await?;
+      let mut msg: ContentMessage = serde_json::from_slice(&data)?;
+      buffer.append(&mut msg.content);
+    }
 
     sender.flush().await?;
-    fs::write(content_message.filename, content_message.content)?;
+    fs::write(filename, buffer)?;
     Ok(())
   }
 }
