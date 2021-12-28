@@ -5,12 +5,12 @@ use std::sync::Arc;
 use std::time::Instant;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
-//use tokio::time::{sleep, Duration};
+use tokio::time::{sleep, Duration};
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tokio_util::compat::Compat;
 
 use crate::messages::{Message, SendMessage};
-use crate::utils::{start_ws_handshake, calc_chunks};
+use crate::utils::{calc_chunks, start_ws_handshake};
 
 pub struct Relay {}
 
@@ -48,12 +48,10 @@ impl Relay {
     let mut incoming = TcpListenerStream::new(listener);
     let rooms = Arc::new(Mutex::new(HashMap::new()));
 
-    /*
-     * let cleanup = rooms.clone();
-     * tokio::spawn(async move {
-     *   Relay::start_cleanup(cleanup).await;
-     * });
-     */
+    let cleanup = rooms.clone();
+    tokio::spawn(async move {
+      Relay::start_cleanup(cleanup).await;
+    });
 
     while let Some(socket) = incoming.next().await {
       let rooms = rooms.clone();
@@ -66,20 +64,16 @@ impl Relay {
     Ok(())
   }
 
-  /*
-   * async fn start_cleanup(rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>) {
-   *   loop {
-   *     sleep(Duration::new(15, 0)).await;
-   *     let rooms = rooms.lock().await;
-   *     let mut remover = rooms.clone();
-   *     for (key, room) in rooms.iter() {
-   *       if room.lock().await.opened.elapsed() > Duration::new(2, 0) {
-   *         remover.remove(key).unwrap();
-   *       }
-   *     }
-   *   }
-   * }
-   */
+  async fn start_cleanup(rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>) {
+    loop {
+      sleep(Duration::new(3600, 0)).await;
+      let mut rooms = rooms.lock().await;
+      rooms.retain(move |_, v| {
+        let room = v.blocking_lock();
+        room.opened.elapsed() < Duration::new(3600, 0)
+      });
+    }
+  }
 
   async fn create_room(
     client: ClientInfo,
