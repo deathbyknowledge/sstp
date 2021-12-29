@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::net::{SocketAddr};
 
 /*
  * STEPS OF TRANSMITION (I'm not even mentioning encryption yet)
@@ -26,7 +27,7 @@ pub enum Message {
   Content(ContentMessage),
   Error(ErrorMessage),
   Get(GetMessage),
-  Ready,
+  Ready(ReadyMessage),
   Send(SendMessage),
 }
 
@@ -48,9 +49,15 @@ pub struct ContentMessage {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct ReadyMessage {
+  pub addr: SocketAddr,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct ApproveReqMessage {
   pub filename: String,
   pub size: usize,
+  pub addr: SocketAddr,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -73,8 +80,8 @@ impl Message {
     serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
-  pub fn new_approve_req(filename: String, size: usize) -> String {
-    let msg = Message::ApproveReq(ApproveReqMessage { filename, size });
+  pub fn new_approve_req(filename: String, size: usize, addr: SocketAddr) -> String {
+    let msg = Message::ApproveReq(ApproveReqMessage { filename, size, addr });
     serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
@@ -87,8 +94,8 @@ impl Message {
     Message::Get(GetMessage { code })
   }
 
-  pub fn new_ready() -> String {
-    let msg = Message::Ready;
+  pub fn new_ready(addr: SocketAddr) -> String {
+    let msg = Message::Ready(ReadyMessage { addr });
     serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 

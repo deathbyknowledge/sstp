@@ -1,19 +1,19 @@
 mod messages;
 mod relay;
-mod sender;
+mod client;
 mod utils;
 
 use clap::{App, Arg, SubCommand};
 use relay::Relay;
-use sender::Sender;
+use client::Client;
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-  let matches = App::new("stp")
+  let matches = App::new("sstp")
     .version("0.1")
     .author("Steve James. <0x2t1ff@gmail.com>")
-    .about("Steve's Transfer Program. Rust implementation of the Croc prgram.")
+    .about("Steve's Super Transfer Program. Rust implementation of the Croc prgram.")
     .subcommand(
       SubCommand::with_name("send")
         .about("Sends a file")
@@ -30,14 +30,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
   match matches.subcommand() {
     ("send", Some(sub_m)) => {
       let filepath = sub_m.value_of("FILEPATH").unwrap();
-      println!("Sending file {}", filepath);
-      let client = Sender::new();
+      let client = Client::new();
       client.send(filepath).await?;
       Ok(())
     }
     ("get", Some(sub_m)) => {
       let code = sub_m.value_of("CODE").unwrap();
-      let client = Sender::new();
+      let client = Client::new();
       client.get(code).await?;
       Ok(())
     }

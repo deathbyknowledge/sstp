@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
+use std::net::SocketAddr;
 use std::str;
 use std::sync::Arc;
 use std::time::Instant;
@@ -14,6 +15,12 @@ use crate::utils::{calc_chunks, start_ws_handshake};
 
 pub struct Relay {}
 
+struct ClientInfo {
+  tx: soketto::Sender<Compat<TcpStream>>,
+  rx: soketto::Receiver<Compat<TcpStream>>,
+  addr: SocketAddr,
+}
+
 struct RoomInfo {
   sender: ClientInfo,
   filename: String,
@@ -23,7 +30,7 @@ struct RoomInfo {
 
 impl RoomInfo {
   async fn get_approval(&mut self, client: &mut ClientInfo) -> Result<bool, Box<dyn Error>> {
-    let approve_req = Message::new_approve_req(self.filename.to_string(), self.size);
+    let approve_req = Message::new_approve_req(self.filename.to_string(), self.size, self.sender.addr);
     client.tx.send_text(approve_req).await?;
     let mut data = Vec::new();
     client.rx.receive_data(&mut data).await?;
@@ -36,10 +43,6 @@ impl RoomInfo {
   }
 }
 
-struct ClientInfo {
-  tx: soketto::Sender<Compat<TcpStream>>,
-  rx: soketto::Receiver<Compat<TcpStream>>,
-}
 
 impl Relay {
   pub async fn start() -> Result<(), Box<dyn Error>> {
@@ -98,10 +101,12 @@ impl Relay {
     socket: TcpStream,
     rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
   ) -> Result<(), Box<dyn Error>> {
+    let addr = socket.peer_addr()?;
     let (sender, receiver) = start_ws_handshake(socket).await?;
     let mut client = ClientInfo {
       tx: sender,
       rx: receiver,
+      addr,
     };
     let mut data = Vec::new();
     client.rx.receive_data(&mut data).await?;
@@ -130,7 +135,7 @@ impl Relay {
             }
 
             // Send Ready message to start the file transfer from the sending client
-            let ready_message = Message::new_ready();
+            let ready_message = Message::new_ready(client.addr);
             room.sender.tx.send_text(ready_message).await?;
             for _ in 0..calc_chunks(room.size) {
               let mut data = Vec::new();

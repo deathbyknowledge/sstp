@@ -1,23 +1,28 @@
+use bytesize::to_string;
 use crate::messages::{ContentMessage, Message};
 use crate::utils::*;
 use std::error::Error;
 use std::fs;
 use std::str;
 
-pub struct Sender {}
+pub struct Client {}
 
-impl Sender {
+impl Client {
   pub fn new() -> Self {
-    Sender {}
+    Client {}
   }
 
-  pub async fn send(&self, filename: &str) -> Result<(), Box<dyn Error>> {
+  pub async fn send(&self, filepath: &str) -> Result<(), Box<dyn Error>> {
+    let filename = validate_filepath(filepath);
+    let file = fs::read(filepath)?;
     let (mut sender, mut receiver) = start_ws_conn().await?;
-    let file = fs::read(filename)?;
 
-    let key = gen_room_key();
-    println!("You're key is {}", key);
-    let message = Message::new_send(filename.to_string(), file.len(), key);
+    let code = gen_room_key();
+    println!("Sending '{}' ({})", filename, to_string(file.len().try_into()?, false));
+    println!("Code is: {}", code);
+    println!("In the other computer run");
+    println!("\nsstp get {}\n", code);
+    let message = Message::new_send(filename.to_string(), file.len(), code);
 
     sender.send_text(message).await?;
 
@@ -25,11 +30,16 @@ impl Sender {
     receiver.receive_data(&mut data).await?;
 
     let message: Message = serde_json::from_slice(&data)?;
-    if let Message::Ready = message {
+    if let Message::Ready(message) = message {
+      println!("Sending (->{})", message.addr);
+      let pb = create_pb(file.len());
       for chunk in file.chunks(1_000_000) {
-        let msg = Message::new_content(chunk.to_vec());
-        sender.send_binary(msg).await?;
+        let content = Message::new_content(chunk.to_vec());
+        sender.send_binary(content).await?;
+        pb.inc(chunk.len().try_into()?);
       }
+      pb.finish_and_clear();
+      println!("Succesfully sent! ✅");
     } else {
       panic!("Expected ReadyMessage. Got something else.");
     }
@@ -57,27 +67,31 @@ impl Sender {
         return Ok(());
       }
       Message::ApproveReq(req) => {
-        println!("Accept {} ({}b)? (y/n)", req.filename, req.size);
-        filename = req.filename;
+        filename = req.filename.clone();
         size = req.size;
-        let approved = req_keyboard_approval();
+        let approved = req_keyboard_approval(req.filename, req.size);
         let res_message = Message::new_approve_res(approved);
         sender.send_text(res_message).await?;
         if !approved {
           return Ok(());
         }
+      println!("Receiving (<-{})", req.addr);
       }
       _ => unreachable!(),
     }
 
     let mut buffer = Vec::new();
     let chunks = calc_chunks(size);
+    let pb = create_pb(size); 
     for _ in 0..chunks {
       let mut data = Vec::new();
       receiver.receive_data(&mut data).await?;
       let mut msg: ContentMessage = serde_json::from_slice(&data)?;
+      pb.inc(msg.content.len().try_into()?);
       buffer.append(&mut msg.content);
     }
+    pb.finish_and_clear();
+    println!("Downloaded ✅");
 
     sender.flush().await?;
     fs::write(filename, buffer)?;
