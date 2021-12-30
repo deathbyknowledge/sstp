@@ -11,7 +11,7 @@ use std::error::Error;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
   let matches = App::new("sstp")
-    .version("0.1")
+    .version("0.2")
     .author("Steve James. <0x2t1ff@gmail.com>")
     .about("Steve's Super Transfer Program. Rust implementation of the Croc prgram.")
     .subcommand(
