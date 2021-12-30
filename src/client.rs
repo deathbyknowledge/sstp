@@ -1,6 +1,6 @@
-use bytesize::to_string;
 use crate::messages::{ContentMessage, Message};
 use crate::utils::*;
+use bytesize::to_string;
 use std::error::Error;
 use std::fs;
 use std::str;
@@ -18,7 +18,11 @@ impl Client {
     let (mut sender, mut receiver) = start_ws_conn().await?;
 
     let code = gen_room_key();
-    println!("Sending '{}' ({})", filename, to_string(file.len().try_into()?, false));
+    println!(
+      "Sending '{}' ({})",
+      filename,
+      to_string(file.len().try_into()?, false)
+    );
     println!("Code is: {}", code);
     println!("In the other computer run");
     println!("\nsstp get {}\n", code);
@@ -75,14 +79,14 @@ impl Client {
         if !approved {
           return Ok(());
         }
-      println!("Receiving (<-{})", req.addr);
+        println!("Receiving (<-{})", req.addr);
       }
       _ => unreachable!(),
     }
 
     let mut buffer = Vec::new();
     let chunks = calc_chunks(size);
-    let pb = create_pb(size); 
+    let pb = create_pb(size);
     for _ in 0..chunks {
       let mut data = Vec::new();
       receiver.receive_data(&mut data).await?;

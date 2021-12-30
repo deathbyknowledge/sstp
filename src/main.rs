@@ -1,11 +1,11 @@
+mod client;
 mod messages;
 mod relay;
-mod client;
 mod utils;
 
 use clap::{App, Arg, SubCommand};
-use relay::Relay;
 use client::Client;
+use relay::Relay;
 use std::error::Error;
 
 #[tokio::main]

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 
 /*
  * STEPS OF TRANSMITION (I'm not even mentioning encryption yet)
@@ -81,7 +81,11 @@ impl Message {
   }
 
   pub fn new_approve_req(filename: String, size: usize, addr: SocketAddr) -> String {
-    let msg = Message::ApproveReq(ApproveReqMessage { filename, size, addr });
+    let msg = Message::ApproveReq(ApproveReqMessage {
+      filename,
+      size,
+      addr,
+    });
     serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 

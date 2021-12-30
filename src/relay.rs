@@ -30,7 +30,8 @@ struct RoomInfo {
 
 impl RoomInfo {
   async fn get_approval(&mut self, client: &mut ClientInfo) -> Result<bool, Box<dyn Error>> {
-    let approve_req = Message::new_approve_req(self.filename.to_string(), self.size, self.sender.addr);
+    let approve_req =
+      Message::new_approve_req(self.filename.to_string(), self.size, self.sender.addr);
     client.tx.send_text(approve_req).await?;
     let mut data = Vec::new();
     client.rx.receive_data(&mut data).await?;
@@ -42,7 +43,6 @@ impl RoomInfo {
     }
   }
 }
-
 
 impl Relay {
   pub async fn start() -> Result<(), Box<dyn Error>> {
