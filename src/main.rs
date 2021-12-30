@@ -3,7 +3,7 @@ mod messages;
 mod relay;
 mod utils;
 
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, SubCommand, crate_version};
 use client::Client;
 use relay::Relay;
 use std::error::Error;
@@ -11,7 +11,7 @@ use std::error::Error;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
   let matches = App::new("sstp")
-    .version("0.2")
+    .version(crate_version!())
     .author("Steve James. <0x2t1ff@gmail.com>")
     .about("Steve's Super Transfer Program. Rust implementation of the Croc prgram.")
     .subcommand(
