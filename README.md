@@ -20,13 +20,13 @@ Running the previous command will generate a unique code. Use that code from a d
 sstp send [code]
 ```
 
-**Start a relay server (WIP):**
+**Start a relay server:**
 ```
 sstp relay
 ```
 
 ## TODOs:
-- [ ] Add extra parameters: Relay address(both IP and Domain names), custom code.
+- [ ] Add extra parameters: Relay address(as a domain name) and custom code.
 - [ ] Add compression
 - [ ] Add e2e encryption (PAKE or other protocol)
 - [ ] Automate tests

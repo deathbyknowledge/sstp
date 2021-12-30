@@ -6,16 +6,20 @@ use soketto::connection::{Receiver as ReceiverSk, Sender as SenderSk};
 use soketto::handshake::server::Response;
 use soketto::handshake::{Client, ServerResponse};
 use std::error::Error;
+use std::net::SocketAddr;
 use std::path::Path;
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 
+const PUBLIC_RELAY: &str = "138.68.103.243:8004";
+
 // CONNECTIONS
 pub async fn start_ws_conn(
+  relay_addr: SocketAddr,
 ) -> Result<(SenderSk<Compat<TcpStream>>, ReceiverSk<Compat<TcpStream>>), Box<dyn Error>> {
-  let socket = TcpStream::connect("138.68.103.243:8004").await?;
-
-  let mut client = Client::new(socket.compat(), "138.68.103.243:8004", "/");
+  let socket = TcpStream::connect(relay_addr).await?;
+  let str_addr = relay_addr.clone().to_string();
+  let mut client = Client::new(socket.compat(), &str_addr, "/");
 
   let (sender, receiver) = match client.handshake().await? {
     ServerResponse::Accepted { .. } => client.into_builder().finish(),
@@ -85,8 +89,8 @@ pub fn calc_chunks(size: usize) -> usize {
 }
 
 // Validation
-pub fn validate_filepath(filepath: &str) -> &str {
-  let path = Path::new(filepath);
+pub fn validate_filepath(filepath: &String) -> String {
+  let path = Path::new(&filepath);
   if !path.is_file() {
     panic!("File does not exist.");
   }
@@ -95,4 +99,14 @@ pub fn validate_filepath(filepath: &str) -> &str {
     .expect("Coudln't get filename")
     .to_str()
     .expect("Errored when parsing OsStr")
+    .to_string()
+}
+
+pub fn parse_relay_addr(addr: Option<&str>) -> SocketAddr {
+  if let Some(addr) = addr {
+    let addr = addr.parse().expect("Couldn't parse the provided address");
+    addr
+  } else {
+    PUBLIC_RELAY.parse().unwrap()
+  }
 }

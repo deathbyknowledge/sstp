@@ -3,19 +3,52 @@ use crate::utils::*;
 use bytesize::to_string;
 use std::error::Error;
 use std::fs;
+use std::net::SocketAddr;
 use std::str;
 
 pub struct Client {}
+
+pub struct SendParams {
+  filepath: String,
+  filename: String,
+  relay_addr: SocketAddr,
+}
+
+impl SendParams {
+  pub fn new(filepath: Option<&str>, relay_addr: Option<&str>) -> Self {
+    let filepath = filepath.expect("Filepath must be provided").to_string();
+    let filename = validate_filepath(&filepath);
+    let relay_addr = parse_relay_addr(relay_addr);
+    SendParams {
+      filepath,
+      filename,
+      relay_addr,
+    }
+  }
+}
+
+pub struct GetParams {
+  code: String,
+  relay_addr: SocketAddr,
+}
+
+impl GetParams {
+  pub fn new(code: Option<&str>, relay_addr: Option<&str>) -> Self {
+    let code = code.expect("Room code must be provided").to_string();
+    let relay_addr = parse_relay_addr(relay_addr);
+    GetParams { code, relay_addr }
+  }
+}
 
 impl Client {
   pub fn new() -> Self {
     Client {}
   }
 
-  pub async fn send(&self, filepath: &str) -> Result<(), Box<dyn Error>> {
-    let filename = validate_filepath(filepath);
-    let file = fs::read(filepath)?;
-    let (mut sender, mut receiver) = start_ws_conn().await?;
+  pub async fn send(&self, params: SendParams) -> Result<(), Box<dyn Error>> {
+    let file = fs::read(params.filepath)?;
+    let filename = params.filename;
+    let (mut sender, mut receiver) = start_ws_conn(params.relay_addr).await?;
 
     let code = gen_room_key();
     println!(
@@ -52,10 +85,10 @@ impl Client {
     Ok(())
   }
 
-  pub async fn get(&self, code: &str) -> Result<(), Box<dyn Error>> {
-    let (mut sender, mut receiver) = start_ws_conn().await?;
+  pub async fn get(&self, params: GetParams) -> Result<(), Box<dyn Error>> {
+    let (mut sender, mut receiver) = start_ws_conn(params.relay_addr).await?;
 
-    let message = Message::new_get(code.to_string());
+    let message = Message::new_get(params.code);
     let message_text = serde_json::to_string(&message)?;
 
     sender.send_text(message_text).await?;

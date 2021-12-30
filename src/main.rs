@@ -3,8 +3,8 @@ mod messages;
 mod relay;
 mod utils;
 
-use clap::{App, Arg, SubCommand, crate_version};
-use client::Client;
+use clap::{crate_version, App, Arg, SubCommand};
+use client::{Client, GetParams, SendParams};
 use relay::Relay;
 use std::error::Error;
 
@@ -17,27 +17,39 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .subcommand(
       SubCommand::with_name("send")
         .about("Sends a file")
-        .arg(Arg::with_name("FILEPATH").index(1).required(true)),
+        .arg(Arg::with_name("FILEPATH").index(1).required(true))
+        .arg(
+          Arg::with_name("relay")
+            .long("relay")
+            .value_name("RELAY")
+            .takes_value(true),
+        ),
     )
     .subcommand(
       SubCommand::with_name("get")
         .about("Downloads a file")
-        .arg(Arg::with_name("CODE").index(1).required(true)),
+        .arg(Arg::with_name("CODE").index(1).required(true))
+        .arg(
+          Arg::with_name("relay")
+            .long("relay")
+            .value_name("RELAY")
+            .takes_value(true),
+        ),
     )
     .subcommand(SubCommand::with_name("relay").about("Starts a Relay Server"))
     .get_matches();
 
   match matches.subcommand() {
     ("send", Some(sub_m)) => {
-      let filepath = sub_m.value_of("FILEPATH").unwrap();
+      let params = SendParams::new(sub_m.value_of("FILEPATH"), sub_m.value_of("relay"));
       let client = Client::new();
-      client.send(filepath).await?;
+      client.send(params).await?;
       Ok(())
     }
     ("get", Some(sub_m)) => {
-      let code = sub_m.value_of("CODE").unwrap();
+      let params = GetParams::new(sub_m.value_of("CODE"), sub_m.value_of("relay"));
       let client = Client::new();
-      client.get(code).await?;
+      client.get(params).await?;
       Ok(())
     }
     ("relay", _) => {
