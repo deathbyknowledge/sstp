@@ -1,5 +1,6 @@
 [package]
 name = "sstp"
+default-run = "sstp"
 description = "Croc implementation in Rust..."
 version = "0.2.1"
 authors = ["Steve James <0x2t1ff@gmail.com>"]
@@ -22,3 +23,11 @@ soketto = "0.7.0"
 tokio = { version = "1.13.0", features = ["full"] }
 tokio-stream = { version = "0.1.8", features = ["net"] }
 tokio-util = { version = "0.6.9", features = ["compat"] }
+
+[lib]
+name = "sstp"
+path = "src/lib/mod.rs"
+
+[[bin]]
+name = "sstp"
+path = "src/bin/cli.rs"

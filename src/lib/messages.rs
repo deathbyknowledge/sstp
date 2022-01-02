@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use std::error::Error;
+use std::fmt;
 use std::net::SocketAddr;
 
 /*
@@ -70,6 +72,20 @@ pub struct ErrorMessage {
   pub text: String,
 }
 
+impl Error for ErrorMessage {}
+
+impl fmt::Display for ErrorMessage {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.text)
+  }
+}
+
+impl fmt::Debug for ErrorMessage {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}", self.text)
+  }
+}
+
 impl Message {
   pub fn new_send(filename: String, size: usize, code: String) -> String {
     let msg = Message::Send(SendMessage {
@@ -94,8 +110,11 @@ impl Message {
     serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
-  pub fn new_get(code: String) -> Self {
-    Message::Get(GetMessage { code })
+  pub fn new_get(code: &str) -> String {
+    let msg = Message::Get(GetMessage {
+      code: code.to_string(),
+    });
+    serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
   pub fn new_ready(addr: SocketAddr) -> String {

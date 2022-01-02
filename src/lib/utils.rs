@@ -1,13 +1,9 @@
-use bytesize::to_string;
-use dialoguer::{console, Confirm};
-use indicatif::{ProgressBar, ProgressStyle};
 use parity_wordlist::random_phrase;
 use soketto::connection::{Receiver as ReceiverSk, Sender as SenderSk};
 use soketto::handshake::server::Response;
 use soketto::handshake::{Client, ServerResponse};
 use std::error::Error;
 use std::net::SocketAddr;
-use std::path::Path;
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 
@@ -48,35 +44,6 @@ pub async fn start_ws_handshake(
   Ok((sender, receiver))
 }
 
-// STDOUT/STDIN
-pub fn req_keyboard_approval(filename: String, size: usize) -> bool {
-  let output = format!(
-    "Accept {} ({})?",
-    filename,
-    to_string(
-      size.try_into().expect("Error when parsing usize to u64"),
-      false
-    )
-  );
-  let approved = Confirm::new()
-    .with_prompt(output)
-    .interact()
-    .expect("Error when requesting input");
-  let term = console::Term::stdout();
-  term
-    .clear_last_lines(1)
-    .expect("Could not clear terminal line");
-  approved
-}
-
-pub fn create_pb(size: usize) -> ProgressBar {
-  let bar = ProgressBar::new(size.try_into().expect("Error when parsing usize to u64"));
-  bar.set_style(ProgressStyle::default_bar()
-    .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-    .progress_chars("#>-"));
-  bar
-}
-
 // Rand
 pub fn gen_room_key() -> String {
   let phrase = random_phrase(3);
@@ -89,19 +56,6 @@ pub fn calc_chunks(size: usize) -> usize {
 }
 
 // Validation
-pub fn validate_filepath(filepath: &String) -> String {
-  let path = Path::new(&filepath);
-  if !path.is_file() {
-    panic!("File does not exist.");
-  }
-  path
-    .file_name()
-    .expect("Coudln't get filename")
-    .to_str()
-    .expect("Errored when parsing OsStr")
-    .to_string()
-}
-
 pub fn parse_relay_addr(addr: Option<&str>) -> SocketAddr {
   if let Some(addr) = addr {
     let addr = addr.parse().expect("Couldn't parse the provided address");
