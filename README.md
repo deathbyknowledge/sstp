@@ -31,7 +31,7 @@ sstp relay
 - [ ] Add e2e encryption (PAKE or other protocol)
 - [ ] Automate tests
 - [ ] Use multiple ports on the relay...?
-- [ ] Improve project structure. Change into cli/lib workspace maybe?
+- [x] Improve project structure. Change into cli/lib workspace maybe?
 - [ ] Fix room cleanup
 - [ ] Resume interrupted transfers
 - [ ] Support more than 1 file transfers.
