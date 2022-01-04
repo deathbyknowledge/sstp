@@ -2,7 +2,7 @@
 name = "sstp"
 default-run = "sstp"
 description = "Croc implementation in Rust..."
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Steve James <0x2t1ff@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -31,3 +31,6 @@ path = "src/lib/mod.rs"
 [[bin]]
 name = "sstp"
 path = "src/bin/cli.rs"
+
+[profile.release]
+lto = true
