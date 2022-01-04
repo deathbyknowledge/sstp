@@ -2,6 +2,7 @@ use super::ws_conn::WSConn;
 use crate::messages::{ContentMessage, Message};
 use crate::utils::*;
 use std::error::Error;
+use std::io::Write;
 use std::net::SocketAddr;
 use std::str;
 
@@ -10,7 +11,7 @@ pub struct Getter {
   pub relay_addr: SocketAddr,
   ws_conn: WSConn,
   pub filename: Option<String>,
-  pub size: Option<usize>,
+  pub size: Option<u64>,
   pub peer_addr: Option<SocketAddr>,
 }
 
@@ -61,18 +62,18 @@ impl Getter {
 
   pub async fn start_transfer(
     &mut self,
-    f: impl Fn(usize) -> (),
-  ) -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut buffer = Vec::new();
+    wtr: &mut impl Write,
+    f: impl Fn(u64) -> (),
+  ) -> Result<(), Box<dyn Error>> {
     let chunks = calc_chunks(self.size.unwrap());
     for _ in 0..chunks {
       let mut data = Vec::new();
       self.ws_conn.recv(&mut data).await?;
       let mut msg: ContentMessage = serde_json::from_slice(&data)?;
-      f(msg.content.len());
-      buffer.append(&mut msg.content);
+      f(msg.content.len().try_into()?);
+      wtr.write(&mut msg.content)?;
     }
     self.ws_conn.close().await?;
-    Ok(buffer)
+    Ok(())
   }
 }

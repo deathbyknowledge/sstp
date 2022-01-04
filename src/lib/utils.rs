@@ -51,8 +51,8 @@ pub fn gen_room_key() -> String {
 }
 
 // Format
-pub fn calc_chunks(size: usize) -> usize {
-  ((size as f32 + 1_000_000.0 - 1.0) / 1_000_000.0) as usize
+pub fn calc_chunks(size: u64) -> u64 {
+  ((size as f32 + 1_000_000.0 - 1.0) / 1_000_000.0) as u64
 }
 
 // Validation

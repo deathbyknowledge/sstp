@@ -5,7 +5,8 @@ use indicatif::{ProgressBar, ProgressStyle};
 use sstp::client::{Getter, Sender};
 use sstp::relay::Relay;
 use std::error::Error;
-use std::fs;
+use std::fs::File;
+use std::io::{BufWriter, Write};
 use std::path::Path;
 
 #[tokio::main]
@@ -43,20 +44,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ("send", Some(sub_m)) => {
       let filepath = sub_m.value_of("FILEPATH").unwrap();
       let filename = validate_filepath(filepath);
-      let file = fs::read(filepath)?;
+      let mut file = File::open(filepath)?;
 
-      let mut client = Sender::new(filename.to_string(), file.len(), sub_m.value_of("relay"));
+      let mut client = Sender::new(
+        filename.to_string(),
+        file.metadata()?.len().try_into().unwrap(),
+        sub_m.value_of("relay"),
+      );
       client.connect().await?;
       client.create_room().await?;
       print_after_send_help(&client);
       client.wait_for_receiver().await?;
-      println!("Sending (->{})", client.peer_addr.unwrap());
 
+      println!("Sending (->{})", client.peer_addr.unwrap());
       let pb = create_pb(client.size);
-      for chunk in file.chunks(1_000_000) {
-        client.send_chunk(chunk).await?;
-        pb.inc(chunk.len().try_into()?);
-      }
+      client
+        .start_transfer(&mut file, |x: u64| {
+          pb.inc(x);
+        })
+        .await?;
       pb.finish_and_clear();
       println!("Succesfully sent! ✅");
       client.finish().await?;
@@ -72,14 +78,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
       if !approved {
         return Ok(());
       }
+      let file = File::create(client.filename.as_ref().unwrap())?;
+      let mut bw = BufWriter::new(file);
       let pb = create_pb(client.size.unwrap());
       println!("Receiving (<-{})", client.peer_addr.unwrap());
-      let buffer = client
-        .start_transfer(|x: usize| {
+      client
+        .start_transfer(&mut bw, |x: u64| {
           pb.inc(x.try_into().unwrap());
         })
         .await?;
-      fs::write(client.filename.unwrap(), buffer).expect("Could not write to file");
+      bw.flush()?;
       pb.finish_and_clear();
       println!("Downloaded ✅");
 
@@ -102,10 +110,7 @@ fn print_after_send_help(client: &Sender) {
   println!(
     "Sending '{}' ({})",
     client.filename,
-    to_string(
-      client.size.try_into().expect("Can't parse usize to u64"),
-      false
-    )
+    to_string(client.size, false)
   );
   println!("Code is: {}", client.code.as_ref().unwrap());
   println!("In the other computer run");
@@ -124,23 +129,16 @@ fn validate_filepath(filepath: &str) -> &str {
     .expect("Errored when parsing OsStr")
 }
 
-fn create_pb(size: usize) -> ProgressBar {
-  let bar = ProgressBar::new(size.try_into().expect("Error when parsing usize to u64"));
+fn create_pb(size: u64) -> ProgressBar {
+  let bar = ProgressBar::new(size);
   bar.set_style(ProgressStyle::default_bar()
     .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
     .progress_chars("#>-"));
   bar
 }
 
-fn req_keyboard_approval(filename: &str, size: usize) -> bool {
-  let output = format!(
-    "Accept {} ({})?",
-    filename,
-    to_string(
-      size.try_into().expect("Error when parsing usize to u64"),
-      false
-    )
-  );
+fn req_keyboard_approval(filename: &str, size: u64) -> bool {
+  let output = format!("Accept {} ({})?", filename, to_string(size, false));
   let approved = Confirm::new()
     .with_prompt(output)
     .interact()

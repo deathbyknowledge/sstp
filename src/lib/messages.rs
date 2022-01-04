@@ -36,7 +36,7 @@ pub enum Message {
 #[derive(Serialize, Deserialize)]
 pub struct SendMessage {
   pub filename: String,
-  pub size: usize,
+  pub size: u64,
   pub code: String,
 }
 
@@ -58,7 +58,7 @@ pub struct ReadyMessage {
 #[derive(Serialize, Deserialize)]
 pub struct ApproveReqMessage {
   pub filename: String,
-  pub size: usize,
+  pub size: u64,
   pub addr: SocketAddr,
 }
 
@@ -87,7 +87,7 @@ impl fmt::Debug for ErrorMessage {
 }
 
 impl Message {
-  pub fn new_send(filename: String, size: usize, code: String) -> String {
+  pub fn new_send(filename: String, size: u64, code: String) -> String {
     let msg = Message::Send(SendMessage {
       filename,
       size,
@@ -96,7 +96,7 @@ impl Message {
     serde_json::to_string(&msg).expect("Couldn't parse message.")
   }
 
-  pub fn new_approve_req(filename: String, size: usize, addr: SocketAddr) -> String {
+  pub fn new_approve_req(filename: String, size: u64, addr: SocketAddr) -> String {
     let msg = Message::ApproveReq(ApproveReqMessage {
       filename,
       size,

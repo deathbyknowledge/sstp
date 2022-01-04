@@ -25,7 +25,7 @@ struct RoomInfo {
   sender: ClientInfo,
   filename: String,
   opened: Instant,
-  size: usize,
+  size: u64,
 }
 
 impl RoomInfo {

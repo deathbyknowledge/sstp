@@ -3,6 +3,8 @@
 Some time ago I came across [Croc](https://github.com/schollz/croc), a file transfer program written in Go by schollz. It struck me as a really good program that I could actually use in my daily life.
 Since I've been trying to learn some Rust and at the same time expand my networking knowledge, I decided to give it a try and create a Rust implementation (-ish, at least get the same functionality out of it) of it. WIP.
 
+Current benchmarking show that it's only around 20 times slower than the Croc!!
+
 ## Install
 ```
 cargo install sstp
@@ -35,3 +37,4 @@ sstp relay
 - [ ] Fix room cleanup
 - [ ] Resume interrupted transfers
 - [ ] Support more than 1 file transfers.
+- [ ] Use Defeault trait for params?

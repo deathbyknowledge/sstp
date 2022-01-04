@@ -2,19 +2,20 @@ use super::ws_conn::WSConn;
 use crate::messages::Message;
 use crate::utils::*;
 use std::error::Error;
+use std::io::Read;
 use std::net::SocketAddr;
 
 pub struct Sender {
   pub filename: String,
   pub code: Option<String>,
   pub peer_addr: Option<SocketAddr>,
-  pub size: usize,
+  pub size: u64,
   relay_addr: SocketAddr,
   ws_conn: WSConn,
 }
 
 impl Sender {
-  pub fn new(filename: String, size: usize, relay_addr: Option<&str>) -> Self {
+  pub fn new(filename: String, size: u64, relay_addr: Option<&str>) -> Self {
     let relay_addr = parse_relay_addr(relay_addr);
     Sender {
       filename,
@@ -58,7 +59,20 @@ impl Sender {
     Ok(())
   }
 
-  pub async fn send_chunk(&mut self, chunk: &[u8]) -> Result<(), Box<dyn Error>> {
+  pub async fn start_transfer(
+    &mut self,
+    rdr: &mut impl Read,
+    f: impl Fn(u64) -> (),
+  ) -> Result<(), Box<dyn Error>> {
+    let mut buff = vec![0; 1_000_000];
+    while let n @ 1.. = rdr.read(&mut buff)? {
+      self.send_chunk(&buff[0..n]).await?;
+      f(n.try_into().expect("Error when parsing u64"));
+    }
+    Ok(())
+  }
+
+  async fn send_chunk(&mut self, chunk: &[u8]) -> Result<(), Box<dyn Error>> {
     if chunk.len() > 1_000_000 {
       panic!("Chunks should not be bigger than 1MB");
     }
