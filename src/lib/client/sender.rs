@@ -35,9 +35,9 @@ impl Sender {
 
   pub async fn create_room(&mut self) -> Result<(), Box<dyn Error>> {
     let code = gen_room_key();
-    let message = Message::new_send(self.filename.to_string(), self.size, code.clone());
+    let mut message = Message::new_send(self.filename.to_string(), self.size, code.clone());
     self.code = Some(code);
-    self.ws_conn.send(&message).await?;
+    self.ws_conn.send(&mut message).await?;
     Ok(())
   }
 
@@ -67,7 +67,6 @@ impl Sender {
     let mut buff = vec![0; 1_000_000];
     while let n @ 1.. = rdr.read(&mut buff)? {
       self.send_chunk(&buff[0..n]).await?;
-      f(n.try_into().expect("Error when parsing u64"));
     }
     Ok(())
   }
@@ -76,8 +75,8 @@ impl Sender {
     if chunk.len() > 1_000_000 {
       panic!("Chunks should not be bigger than 1MB");
     }
-    let content = Message::new_content(chunk.to_vec());
-    self.ws_conn.send(&content).await?;
+    let mut content = Message::new_content(chunk.to_vec());
+    self.ws_conn.send(&mut content).await?;
     Ok(())
   }
 

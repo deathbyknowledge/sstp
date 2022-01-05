@@ -137,10 +137,11 @@ impl Relay {
             // Send Ready message to start the file transfer from the sending client
             let ready_message = Message::new_ready(client.addr);
             room.sender.tx.send_text(ready_message).await?;
+            let mut data = Vec::with_capacity(1_000_000);
             for _ in 0..calc_chunks(room.size) {
-              let mut data = Vec::new();
               room.sender.rx.receive_data(&mut data).await?;
-              client.tx.send_binary(&data).await?;
+              client.tx.send_binary_mut(&mut data).await?;
+              data.clear();
             }
             let mut rooms = rooms.lock().await;
             rooms.remove(&code).unwrap();

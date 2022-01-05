@@ -18,7 +18,7 @@ impl WSConn {
     self.rx = Some(rx);
   }
 
-  pub async fn send(&mut self, msg: &str) -> Result<(), Box<dyn Error>> {
+  pub async fn send(&mut self, msg: &mut str) -> Result<(), Box<dyn Error>> {
     self
       .tx
       .as_mut()

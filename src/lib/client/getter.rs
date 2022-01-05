@@ -36,8 +36,8 @@ impl Getter {
   }
 
   pub async fn get_room(&mut self) -> Result<(), Box<dyn Error>> {
-    let msg = Message::new_get(&self.code);
-    self.ws_conn.send(&msg).await?;
+    let mut msg = Message::new_get(&self.code);
+    self.ws_conn.send(&mut msg).await?;
 
     let mut data = Vec::new();
     self.ws_conn.recv(&mut data).await?;
@@ -55,8 +55,8 @@ impl Getter {
   }
 
   pub async fn send_approval(&mut self, approved: bool) -> Result<(), Box<dyn Error>> {
-    let res_message = Message::new_approve_res(approved);
-    self.ws_conn.send(&res_message).await?;
+    let mut res_message = Message::new_approve_res(approved);
+    self.ws_conn.send(&mut res_message).await?;
     Ok(())
   }
 
@@ -66,12 +66,13 @@ impl Getter {
     f: impl Fn(u64) -> (),
   ) -> Result<(), Box<dyn Error>> {
     let chunks = calc_chunks(self.size.unwrap());
+    let mut data = Vec::with_capacity(1_000_000);
     for _ in 0..chunks {
-      let mut data = Vec::new();
       self.ws_conn.recv(&mut data).await?;
       let mut msg: ContentMessage = serde_json::from_slice(&data)?;
       f(msg.content.len().try_into()?);
       wtr.write(&mut msg.content)?;
+      data.clear();
     }
     self.ws_conn.close().await?;
     Ok(())
