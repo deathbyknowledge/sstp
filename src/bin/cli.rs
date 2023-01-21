@@ -44,6 +44,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     ("send", Some(sub_m)) => {
       let filepath = sub_m.value_of("FILEPATH").unwrap();
       let filename = validate_filepath(filepath);
+      // TODO: might want to maek this buffreader
       let mut file = File::open(filepath)?;
 
       let mut client = Sender::new(

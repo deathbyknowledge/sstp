@@ -7,7 +7,8 @@ use std::net::SocketAddr;
 use tokio::net::TcpStream;
 use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 
-const PUBLIC_RELAY: &str = "138.68.103.243:8004";
+// Server with public IP I run as a relay
+const PUBLIC_RELAY: &str = "139.177.178.244:8004";
 
 // CONNECTIONS
 pub async fn start_ws_conn(
@@ -63,4 +64,36 @@ pub fn parse_relay_addr(addr: Option<&str>) -> SocketAddr {
   } else {
     PUBLIC_RELAY.parse().unwrap()
   }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+    use super::*;
+
+    #[test]
+    fn test_gen_room_key() {
+        // Make sure the room key has the right length
+        let phrase = gen_room_key();
+        assert_eq!(phrase.split('-').collect::<Vec<&str>>().len(), 3);
+    }
+
+    #[test]
+    fn test_default_parse_address() {
+        // Return the default relay address when none specified
+        let default_addr = parse_relay_addr(None);
+        let relay_ip = IpAddr::V4(Ipv4Addr::new(139, 177, 178, 244));
+
+        assert_eq!(default_addr, SocketAddr::new(relay_ip, 8004));
+    }
+
+    #[test]
+    fn test_custom_parse_address() {
+        // Return the default relay address when none specified
+        let custom_addr = parse_relay_addr(Some("127.0.0.1:8003"));
+        let relay_ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+
+        assert_eq!(custom_addr, SocketAddr::new(relay_ip, 8003));
+    }
 }

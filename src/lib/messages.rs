@@ -5,7 +5,7 @@ use std::net::SocketAddr;
 
 /*
  * STEPS OF TRANSMITION (I'm not even mentioning encryption yet)
- * 1. Sender --> SendMessage (Starts process sending the Filename they want to send.
+ * 1. Sender --> SendMessage (Starts process sending the Filename they want to send)
  * 2. Relay <-- SendMessage (Creates RoomInfo and waits for GetMessage)
  * 3. Receiver --> GetMessage (Sends RoomInfo code it wants to read from)
  * 4. Relay <-- GetMessage (Looks up code in the RoomInfo map)
