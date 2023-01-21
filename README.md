@@ -29,10 +29,11 @@ sstp relay
 - [ ] Add extra parameters: Relay address(as a domain name) and custom code.
 - [ ] Add compression
 - [ ] Add e2e encryption (PAKE or other protocol)
-- [ ] Automate tests
+- [x] Automate tests
 - [ ] Use multiple ports on the relay...?
 - [x] Improve project structure. Change into cli/lib workspace maybe?
 - [ ] Fix room cleanup
 - [ ] Resume interrupted transfers
+- [ ] Move away from JSON. Capnp Proto?
 - [ ] Support more than 1 file transfers.
 - [ ] Use Defeault trait for params?
