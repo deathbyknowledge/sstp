@@ -11,7 +11,7 @@ use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tokio_util::compat::Compat;
 
 use crate::messages::{Message, SendMessage};
-use crate::utils::{calc_chunks, start_ws_handshake};
+use crate::utils::{calc_chunks, start_ws_handshake, MAX_PACKET_SIZE};
 
 pub struct Relay {
   rooms: Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>,
@@ -54,15 +54,17 @@ impl Relay {
   pub async fn start(self) -> Result<(), Box<dyn Error>> {
     let s = Arc::new(self);
     println!("Starting Relay Server...");
-    let listener = TcpListener::bind("0.0.0.0:8004").await?;
-    let mut incoming = TcpListenerStream::new(listener);
+    let comms_listener = TcpListener::bind("0.0.0.0:8004").await?;
+    let mut incoming_comms = TcpListenerStream::new(comms_listener);
+    let transfer_listener = TcpListener::bind("0.0.0.0:8003").await?;
+    let mut incoming_transfers = TcpListenerStream::new(transfer_listener);
 
     let cleanup = s.clone();
     tokio::spawn(async move {
       cleanup.start_cleanup().await;
     });
 
-    while let Some(socket) = incoming.next().await {
+    while let Some(socket) = incoming_comms.next().await {
       let relay = s.clone();
       tokio::spawn(async move {
         relay.process_req(socket.unwrap())
@@ -143,7 +145,7 @@ impl Relay {
             // Send Ready message to start the file transfer from the sending client
             let ready_message = Message::new_ready(client.addr);
             room.sender.tx.send_text(ready_message).await?;
-            let mut data = Vec::with_capacity(1_000_000);
+            let mut data = Vec::with_capacity(MAX_PACKET_SIZE);
             for _ in 0..calc_chunks(room.size) {
               room.sender.rx.receive_data(&mut data).await?;
               client.tx.send_binary_mut(&mut data).await?;

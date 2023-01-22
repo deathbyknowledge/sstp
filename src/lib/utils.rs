@@ -9,6 +9,7 @@ use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
 
 // Server with public IP I run as a relay
 const PUBLIC_RELAY: &str = "139.177.178.244:8004";
+pub const MAX_PACKET_SIZE: usize = 1024 * 64;
 
 // CONNECTIONS
 pub async fn start_ws_conn(
@@ -53,7 +54,7 @@ pub fn gen_room_key() -> String {
 
 // Format
 pub fn calc_chunks(size: u64) -> u64 {
-    ((size as f32 + 1_000_000.0 - 1.0) / 1_000_000.0) as u64
+    ((size as f32 + MAX_PACKET_SIZE as f32 - 1.0) / MAX_PACKET_SIZE as f32) as u64
 }
 
 // Validation
