@@ -24,111 +24,111 @@ use std::net::SocketAddr;
 
 #[derive(Serialize, Deserialize)]
 pub enum Message {
-  ApproveRes(ApproveResMessage),
-  ApproveReq(ApproveReqMessage),
-  Content(ContentMessage),
-  Error(ErrorMessage),
-  Get(GetMessage),
-  Ready(ReadyMessage),
-  Send(SendMessage),
+    ApproveRes(ApproveResMessage),
+    ApproveReq(ApproveReqMessage),
+    Content(ContentMessage),
+    Error(ErrorMessage),
+    Get(GetMessage),
+    Ready(ReadyMessage),
+    Send(SendMessage),
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct SendMessage {
-  pub filename: String,
-  pub size: u64,
-  pub code: String,
+    pub filename: String,
+    pub size: u64,
+    pub code: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct GetMessage {
-  pub code: String,
+    pub code: String,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ContentMessage {
-  pub content: Vec<u8>,
+    pub content: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ReadyMessage {
-  pub addr: SocketAddr,
+    pub addr: SocketAddr,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ApproveReqMessage {
-  pub filename: String,
-  pub size: u64,
-  pub addr: SocketAddr,
+    pub filename: String,
+    pub size: u64,
+    pub addr: SocketAddr,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ApproveResMessage {
-  pub approved: bool,
+    pub approved: bool,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ErrorMessage {
-  pub text: String,
+    pub text: String,
 }
 
 impl Error for ErrorMessage {}
 
 impl fmt::Display for ErrorMessage {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.text)
-  }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.text)
+    }
 }
 
 impl fmt::Debug for ErrorMessage {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "{}", self.text)
-  }
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.text)
+    }
 }
 
 impl Message {
-  pub fn new_send(filename: String, size: u64, code: String) -> String {
-    let msg = Message::Send(SendMessage {
-      filename,
-      size,
-      code,
-    });
-    serde_json::to_string(&msg).expect("Couldn't parse message.")
-  }
+    pub fn new_send(filename: String, size: u64, code: String) -> String {
+        let msg = Message::Send(SendMessage {
+            filename,
+            size,
+            code,
+        });
+        serde_json::to_string(&msg).expect("Couldn't parse message.")
+    }
 
-  pub fn new_approve_req(filename: String, size: u64, addr: SocketAddr) -> String {
-    let msg = Message::ApproveReq(ApproveReqMessage {
-      filename,
-      size,
-      addr,
-    });
-    serde_json::to_string(&msg).expect("Couldn't parse message.")
-  }
+    pub fn new_approve_req(filename: String, size: u64, addr: SocketAddr) -> String {
+        let msg = Message::ApproveReq(ApproveReqMessage {
+            filename,
+            size,
+            addr,
+        });
+        serde_json::to_string(&msg).expect("Couldn't parse message.")
+    }
 
-  pub fn new_approve_res(approved: bool) -> String {
-    let msg = Message::ApproveRes(ApproveResMessage { approved });
-    serde_json::to_string(&msg).expect("Couldn't parse message.")
-  }
+    pub fn new_approve_res(approved: bool) -> String {
+        let msg = Message::ApproveRes(ApproveResMessage { approved });
+        serde_json::to_string(&msg).expect("Couldn't parse message.")
+    }
 
-  pub fn new_get(code: &str) -> String {
-    let msg = Message::Get(GetMessage {
-      code: code.to_string(),
-    });
-    serde_json::to_string(&msg).expect("Couldn't parse message.")
-  }
+    pub fn new_get(code: &str) -> String {
+        let msg = Message::Get(GetMessage {
+            code: code.to_string(),
+        });
+        serde_json::to_string(&msg).expect("Couldn't parse message.")
+    }
 
-  pub fn new_ready(addr: SocketAddr) -> String {
-    let msg = Message::Ready(ReadyMessage { addr });
-    serde_json::to_string(&msg).expect("Couldn't parse message.")
-  }
+    pub fn new_ready(addr: SocketAddr) -> String {
+        let msg = Message::Ready(ReadyMessage { addr });
+        serde_json::to_string(&msg).expect("Couldn't parse message.")
+    }
 
-  pub fn new_content(content: Vec<u8>) -> String {
-    let msg = ContentMessage { content };
-    serde_json::to_string(&msg).expect("Couldn't parse message.")
-  }
+    pub fn new_content(content: Vec<u8>) -> String {
+        let msg = ContentMessage { content };
+        serde_json::to_string(&msg).expect("Couldn't parse message.")
+    }
 
-  pub fn new_error(text: String) -> String {
-    let msg = Message::Error(ErrorMessage { text });
-    serde_json::to_string(&msg).expect("Couldn't parse message.")
-  }
+    pub fn new_error(text: String) -> String {
+        let msg = Message::Error(ErrorMessage { text });
+        serde_json::to_string(&msg).expect("Couldn't parse message.")
+    }
 }
