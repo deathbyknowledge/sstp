@@ -14,7 +14,7 @@ use crate::messages::{Message, SendMessage};
 use crate::utils::{calc_chunks, start_ws_handshake};
 
 pub struct Relay {
-  rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
+  rooms: Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>,
 }
 
 struct ClientInfo {
@@ -48,7 +48,7 @@ impl RoomInfo {
 
 impl Relay {
   pub fn new() -> Self {
-    let rooms = Arc::new(Mutex::new(HashMap::new()));
+    let rooms = Mutex::new(HashMap::new());
     Self { rooms }
   } 
   pub async fn start(self) -> Result<(), Box<dyn Error>> {
