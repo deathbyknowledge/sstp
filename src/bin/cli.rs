@@ -97,7 +97,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         ("relay", _) => {
-            Relay::start().await?;
+            let relay = Relay::new();
+            relay.start().await?;
             Ok(())
         }
 

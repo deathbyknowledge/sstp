@@ -13,7 +13,9 @@ use tokio_util::compat::Compat;
 use crate::messages::{Message, SendMessage};
 use crate::utils::{calc_chunks, start_ws_handshake};
 
-pub struct Relay {}
+pub struct Relay {
+  rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
+}
 
 struct ClientInfo {
   tx: soketto::Sender<Compat<TcpStream>>,
@@ -45,21 +47,25 @@ impl RoomInfo {
 }
 
 impl Relay {
-  pub async fn start() -> Result<(), Box<dyn Error>> {
+  pub fn new() -> Self {
+    let rooms = Arc::new(Mutex::new(HashMap::new()));
+    Self { rooms }
+  } 
+  pub async fn start(self) -> Result<(), Box<dyn Error>> {
+    let s = Arc::new(self);
     println!("Starting Relay Server...");
     let listener = TcpListener::bind("0.0.0.0:8004").await?;
     let mut incoming = TcpListenerStream::new(listener);
-    let rooms = Arc::new(Mutex::new(HashMap::new()));
 
-    let cleanup = rooms.clone();
+    let cleanup = s.clone();
     tokio::spawn(async move {
-      Relay::start_cleanup(cleanup).await;
+      cleanup.start_cleanup().await;
     });
 
     while let Some(socket) = incoming.next().await {
-      let rooms = rooms.clone();
+      let relay = s.clone();
       tokio::spawn(async move {
-        Relay::process_req(socket.unwrap(), rooms)
+        relay.process_req(socket.unwrap())
           .await
           .expect("Error when processing request");
       });
@@ -67,10 +73,10 @@ impl Relay {
     Ok(())
   }
 
-  async fn start_cleanup(rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>) {
+  async fn start_cleanup(&self) {
     loop {
       sleep(Duration::new(3600, 0)).await;
-      let mut rooms = rooms.lock().await;
+      let mut rooms = self.rooms.lock().await;
       rooms.retain(move |_, v| {
         let room = v.blocking_lock();
         room.opened.elapsed() < Duration::new(3600, 0)
@@ -79,9 +85,9 @@ impl Relay {
   }
 
   async fn create_room(
+    &self,
     client: ClientInfo,
     message: SendMessage,
-    rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
   ) -> Result<(), Box<dyn Error>> {
     let code = message.code;
     let filename = message.filename;
@@ -92,14 +98,14 @@ impl Relay {
       size,
       opened: Instant::now(),
     }));
-    let mut rooms = rooms.lock().await;
+    let mut rooms = self.rooms.lock().await;
     rooms.insert(code.to_string(), room);
     Ok(())
   }
 
   async fn process_req(
+    &self, 
     socket: TcpStream,
-    rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
   ) -> Result<(), Box<dyn Error>> {
     let addr = socket.peer_addr()?;
     let (sender, receiver) = start_ws_handshake(socket).await?;
@@ -113,11 +119,11 @@ impl Relay {
     let message: Message = serde_json::from_str(str::from_utf8(&data).unwrap())?;
 
     match message {
-      Message::Send(message) => Relay::create_room(client, message, rooms).await?,
+      Message::Send(message) => self.create_room(client, message).await?,
       Message::Get(message) => {
         let code = message.code;
         let room = {
-          let mut rooms = rooms.lock().await;
+          let mut rooms = self.rooms.lock().await;
           let room_res = rooms.get_mut(&code);
           if let Some(room) = room_res {
             Some(room.clone())
@@ -143,7 +149,7 @@ impl Relay {
               client.tx.send_binary_mut(&mut data).await?;
               data.clear();
             }
-            let mut rooms = rooms.lock().await;
+            let mut rooms = self.rooms.lock().await;
             rooms.remove(&code).unwrap();
           }
 
