@@ -5,7 +5,7 @@ use std::str;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use tokio::time::{sleep, Duration};
 use tokio_stream::{wrappers::TcpListenerStream, StreamExt};
 use tokio_util::compat::Compat;
@@ -49,7 +49,7 @@ impl Relay {
     println!("Starting Relay Server...");
     let listener = TcpListener::bind("0.0.0.0:8004").await?;
     let mut incoming = TcpListenerStream::new(listener);
-    let rooms = Arc::new(Mutex::new(HashMap::new()));
+    let rooms = Arc::new(RwLock::new(HashMap::new()));
 
     let cleanup = rooms.clone();
     tokio::spawn(async move {
@@ -67,39 +67,43 @@ impl Relay {
     Ok(())
   }
 
-  async fn start_cleanup(rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>) {
+  async fn start_cleanup(rooms: Arc<RwLock<HashMap<String, Arc<RwLock<RoomInfo>>>>>) {
     loop {
       sleep(Duration::new(3600, 0)).await;
-      let mut rooms = rooms.lock().await;
-      rooms.retain(move |_, v| {
-        let room = v.blocking_lock();
-        room.opened.elapsed() < Duration::new(3600, 0)
-      });
+      let mut tmp:HashMap<String, Arc<RwLock<RoomInfo>>> = HashMap::new();
+      for (k,v) in rooms.read().await.iter() {
+        let room = v.read().await;
+        // If room was created less than an hour ago, keep it.
+        if room.opened.elapsed() < Duration::new(3600, 0) {
+          tmp.insert(k.to_string(), v.clone());
+        }
+      }
+      *rooms.write().await = tmp;
     }
   }
 
   async fn create_room(
     client: ClientInfo,
     message: SendMessage,
-    rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
+    rooms: Arc<RwLock<HashMap<String, Arc<RwLock<RoomInfo>>>>>,
   ) -> Result<(), Box<dyn Error>> {
     let code = message.code;
     let filename = message.filename;
     let size = message.size;
-    let room = Arc::new(Mutex::new(RoomInfo {
+    let room = Arc::new(RwLock::new(RoomInfo {
       sender: client,
       filename,
       size,
       opened: Instant::now(),
     }));
-    let mut rooms = rooms.lock().await;
+    let mut rooms = rooms.write().await;
     rooms.insert(code.to_string(), room);
     Ok(())
   }
 
   async fn process_req(
     socket: TcpStream,
-    rooms: Arc<Mutex<HashMap<String, Arc<Mutex<RoomInfo>>>>>,
+    rooms: Arc<RwLock<HashMap<String, Arc<RwLock<RoomInfo>>>>>,
   ) -> Result<(), Box<dyn Error>> {
     let addr = socket.peer_addr()?;
     let (sender, receiver) = start_ws_handshake(socket).await?;
@@ -117,8 +121,8 @@ impl Relay {
       Message::Get(message) => {
         let code = message.code;
         let room = {
-          let mut rooms = rooms.lock().await;
-          let room_res = rooms.get_mut(&code);
+          let rooms = rooms.read().await;
+          let room_res = rooms.get(&code);
           if let Some(room) = room_res {
             Some(room.clone())
           } else {
@@ -128,7 +132,7 @@ impl Relay {
         match room {
           Some(room) => {
             // Send Approval request for this file
-            let mut room = room.lock().await;
+            let mut room = room.write().await;
             let approved = room.get_approval(&mut client).await?;
             if !approved {
               return Ok(());
@@ -143,7 +147,7 @@ impl Relay {
               client.tx.send_binary_mut(&mut data).await?;
               data.clear();
             }
-            let mut rooms = rooms.lock().await;
+            let mut rooms = rooms.write().await;
             rooms.remove(&code).unwrap();
           }
 
